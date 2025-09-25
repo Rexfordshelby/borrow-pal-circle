@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,8 @@ const AddListing = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const listingType = searchParams.get('type') || 'item'; // 'item' or 'service'
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,8 @@ const AddListing = () => {
     deposit_amount: '',
     condition: 'good',
     location: '',
+    hourly_rate: '',
+    duration_hours: '1',
   });
 
   useEffect(() => {
@@ -89,10 +93,11 @@ const AddListing = () => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
-      const filePath = `item-photos/${fileName}`;
+      const bucketName = listingType === 'service' ? 'service-photos' : 'item-photos';
+      const filePath = `${bucketName}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('item-photos')
+        .from(bucketName)
         .upload(filePath, file);
 
       if (uploadError) {
@@ -100,8 +105,9 @@ const AddListing = () => {
         return null;
       }
 
+      const bucketName = listingType === 'service' ? 'service-photos' : 'item-photos';
       const { data } = supabase.storage
-        .from('item-photos')
+        .from(bucketName)
         .getPublicUrl(filePath);
 
       return data.publicUrl;
@@ -128,34 +134,44 @@ const AddListing = () => {
         }
       }
 
-      const { error } = await supabase
-        .from('items')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          category_id: formData.category_id || null,
-          daily_rate: parseFloat(formData.daily_rate),
-          deposit_amount: formData.deposit_amount ? parseFloat(formData.deposit_amount) : null,
-          condition: formData.condition,
-          location: formData.location,
-          image_url: imageUrl || null,
-          owner_id: user.id,
-          is_available: true
-        });
+      if (listingType === 'service') {
+        const { error } = await supabase
+          .from('services')
+          .insert({
+            title: formData.title,
+            description: formData.description,
+            category_id: formData.category_id || null,
+            hourly_rate: parseFloat(formData.hourly_rate),
+            duration_hours: parseInt(formData.duration_hours),
+            location: formData.location,
+            image_url: imageUrl || null,
+            provider_id: user.id,
+            is_available: true
+          });
 
-      if (error) {
-        console.error('Error creating listing:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create listing",
-          variant: "destructive",
-        });
-        return;
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('items')
+          .insert({
+            title: formData.title,
+            description: formData.description,
+            category_id: formData.category_id || null,
+            daily_rate: parseFloat(formData.daily_rate),
+            deposit_amount: formData.deposit_amount ? parseFloat(formData.deposit_amount) : null,
+            condition: formData.condition,
+            location: formData.location,
+            image_url: imageUrl || null,
+            owner_id: user.id,
+            is_available: true
+          });
+
+        if (error) throw error;
       }
 
       toast({
         title: "Success",
-        description: "Your item has been listed successfully!",
+        description: `Your ${listingType} has been listed successfully!`,
       });
 
       navigate('/profile');
@@ -184,7 +200,9 @@ const AddListing = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </Button>
-          <h1 className="text-xl font-semibold">Add New Item</h1>
+          <h1 className="text-xl font-semibold">
+            Add New {listingType === 'service' ? 'Service' : 'Item'}
+          </h1>
           <div className="w-20"></div>
         </div>
       </header>
@@ -238,9 +256,11 @@ const AddListing = () => {
                           <Upload className="w-8 h-8 text-muted-foreground" />
                         </div>
                         <div>
-                          <h3 className="font-medium">Upload item photos</h3>
+                          <h3 className="font-medium">
+                            Upload {listingType} photos
+                          </h3>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Add photos to help others see your item
+                            Add photos to help others see your {listingType}
                           </p>
                         </div>
                         <Input
@@ -266,12 +286,17 @@ const AddListing = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="title">Item Title *</Label>
+                  <Label htmlFor="title">
+                    {listingType === 'service' ? 'Service' : 'Item'} Title *
+                  </Label>
                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Professional Camera"
+                    placeholder={listingType === 'service' 
+                      ? "e.g., Professional Photography" 
+                      : "e.g., Professional Camera"
+                    }
                     required
                   />
                 </div>
@@ -282,7 +307,10 @@ const AddListing = () => {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe your item, its features, and any special instructions..."
+                    placeholder={listingType === 'service' 
+                      ? "Describe your service, what's included, and your experience..."
+                      : "Describe your item, its features, and any special instructions..."
+                    }
                     rows={4}
                   />
                 </div>
@@ -306,23 +334,25 @@ const AddListing = () => {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="condition">Condition</Label>
-                  <Select
-                    value={formData.condition}
-                    onValueChange={(value) => setFormData({ ...formData, condition: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">Like New</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="fair">Fair</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {listingType === 'item' && (
+                  <div>
+                    <Label htmlFor="condition">Condition</Label>
+                    <Select
+                      value={formData.condition}
+                      onValueChange={(value) => setFormData({ ...formData, condition: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">Like New</SelectItem>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -335,38 +365,76 @@ const AddListing = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="daily_rate">Daily Rate (USD) *</Label>
-                  <Input
-                    id="daily_rate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.daily_rate}
-                    onChange={(e) => setFormData({ ...formData, daily_rate: e.target.value })}
-                    placeholder="0.00"
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    How much do you want to charge per day?
-                  </p>
-                </div>
+                {listingType === 'service' ? (
+                  <>
+                    <div>
+                      <Label htmlFor="hourly_rate">Hourly Rate (USD) *</Label>
+                      <Input
+                        id="hourly_rate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.hourly_rate}
+                        onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+                        placeholder="0.00"
+                        required
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        How much do you want to charge per hour?
+                      </p>
+                    </div>
 
-                <div>
-                  <Label htmlFor="deposit_amount">Security Deposit (Optional)</Label>
-                  <Input
-                    id="deposit_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.deposit_amount}
-                    onChange={(e) => setFormData({ ...formData, deposit_amount: e.target.value })}
-                    placeholder="0.00"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Optional security deposit to protect your item
-                  </p>
-                </div>
+                    <div>
+                      <Label htmlFor="duration_hours">Minimum Duration (Hours)</Label>
+                      <Input
+                        id="duration_hours"
+                        type="number"
+                        min="1"
+                        value={formData.duration_hours}
+                        onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })}
+                        placeholder="1"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Minimum hours required for booking
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label htmlFor="daily_rate">Daily Rate (USD) *</Label>
+                      <Input
+                        id="daily_rate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.daily_rate}
+                        onChange={(e) => setFormData({ ...formData, daily_rate: e.target.value })}
+                        placeholder="0.00"
+                        required
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        How much do you want to charge per day?
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="deposit_amount">Security Deposit (Optional)</Label>
+                      <Input
+                        id="deposit_amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.deposit_amount}
+                        onChange={(e) => setFormData({ ...formData, deposit_amount: e.target.value })}
+                        placeholder="0.00"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Optional security deposit to protect your item
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <Label htmlFor="location">Location *</Label>
@@ -401,10 +469,12 @@ const AddListing = () => {
               <Button
                 type="submit"
                 variant="hero"
-                disabled={loading || !formData.title || !formData.daily_rate || !formData.location}
+                disabled={loading || !formData.title || 
+                  (!formData.daily_rate && !formData.hourly_rate) || !formData.location}
                 className="flex-1"
               >
-                {loading ? "Creating..." : "List Item"}
+                {loading ? "Creating..." : 
+                  `List ${listingType === 'service' ? 'Service' : 'Item'}`}
               </Button>
             </div>
           </form>

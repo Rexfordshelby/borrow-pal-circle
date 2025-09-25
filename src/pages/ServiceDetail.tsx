@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { 
   ArrowLeft, 
   Calendar as CalendarIcon, 
@@ -23,18 +25,19 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Item {
+interface Service {
   id: string;
   title: string;
   description: string;
-  daily_rate: number;
+  hourly_rate: number;
   image_url: string;
   category_id: string;
   location: string;
-  condition: string;
-  owner_id: string;
-  deposit_amount: number;
+  provider_id: string;
   is_available: boolean;
+  duration_hours: number;
+  rating: number;
+  total_ratings: number;
   profiles?: {
     full_name: string;
     avatar_url: string;
@@ -48,16 +51,17 @@ interface Item {
   };
 }
 
-const ItemDetail = () => {
+const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [item, setItem] = useState<Item | null>(null);
+  const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
-  const [borrowDate, setBorrowDate] = useState<Date>();
-  const [returnDate, setReturnDate] = useState<Date>();
+  const [bookingDate, setBookingDate] = useState<Date>();
+  const [bookingTime, setBookingTime] = useState('');
+  const [duration, setDuration] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -65,23 +69,23 @@ const ItemDetail = () => {
       navigate('/auth');
       return;
     }
-    fetchItem();
+    fetchService();
   }, [id, user, navigate]);
 
-  const fetchItem = async () => {
+  const fetchService = async () => {
     try {
       const { data, error } = await supabase
-        .from('items')
+        .from('services')
         .select(`
           *,
-          profiles!items_owner_id_fkey (
+          profiles!services_provider_id_fkey (
             full_name,
             avatar_url,
             rating,
             total_ratings,
             bio
           ),
-          categories!items_category_id_fkey (
+          categories!services_category_id_fkey (
             name,
             icon
           )
@@ -90,58 +94,56 @@ const ItemDetail = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching item:', error);
+        console.error('Error fetching service:', error);
         toast({
           title: "Error",
-          description: "Item not found",
+          description: "Service not found",
           variant: "destructive",
         });
-        navigate('/home');
+        navigate('/services');
         return;
       }
 
-      setItem(data as any);
+      setService(data as any);
     } catch (error) {
-      console.error('Error fetching item:', error);
-      navigate('/home');
+      console.error('Error fetching service:', error);
+      navigate('/services');
     } finally {
       setLoading(false);
     }
   };
 
   const calculateTotal = () => {
-    if (!borrowDate || !returnDate || !item) return 0;
-    const days = differenceInDays(returnDate, borrowDate) + 1;
-    return days * item.daily_rate;
+    if (!service || !duration) return 0;
+    return parseFloat(duration) * service.hourly_rate;
   };
 
-  const handleBorrowRequest = async () => {
-    if (!borrowDate || !returnDate || !item || !user) return;
+  const handleBookingRequest = async () => {
+    if (!bookingDate || !bookingTime || !service || !user) return;
 
     setIsSubmitting(true);
 
     try {
-      const days = differenceInDays(returnDate, borrowDate) + 1;
-      const totalAmount = days * item.daily_rate;
+      const totalAmount = calculateTotal();
 
       const { error } = await supabase
-        .from('lending_transactions')
+        .from('service_bookings')
         .insert({
-          item_id: item.id,
-          borrower_id: user.id,
-          lender_id: item.owner_id,
-          borrow_date: borrowDate.toISOString(),
-          due_date: returnDate.toISOString(),
+          service_id: service.id,
+          customer_id: user.id,
+          provider_id: service.provider_id,
+          booking_date: bookingDate.toISOString().split('T')[0],
+          booking_time: bookingTime,
+          duration_hours: parseInt(duration),
           total_amount: totalAmount,
-          deposit_amount: item.deposit_amount || 0,
           status: 'pending'
         });
 
       if (error) {
-        console.error('Error creating borrow request:', error);
+        console.error('Error creating booking request:', error);
         toast({
           title: "Error",
-          description: "Failed to create borrow request",
+          description: "Failed to create booking request",
           variant: "destructive",
         });
         return;
@@ -149,7 +151,7 @@ const ItemDetail = () => {
 
       toast({
         title: "Request Sent!",
-        description: "Your borrow request has been sent to the owner",
+        description: "Your booking request has been sent to the service provider",
       });
 
       navigate('/orders');
@@ -170,24 +172,24 @@ const ItemDetail = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Loading item details...</p>
+          <p className="text-muted-foreground">Loading service details...</p>
         </div>
       </div>
     );
   }
 
-  if (!item) {
+  if (!service) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold">Item not found</h2>
-          <Button onClick={() => navigate('/home')}>Back to Home</Button>
+          <h2 className="text-xl font-semibold">Service not found</h2>
+          <Button onClick={() => navigate('/services')}>Back to Services</Button>
         </div>
       </div>
     );
   }
 
-  const isOwner = user?.id === item.owner_id;
+  const isProvider = user?.id === service.provider_id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -219,17 +221,17 @@ const ItemDetail = () => {
           {/* Image Section */}
           <div className="space-y-4 fade-in">
             <div className="aspect-square rounded-lg overflow-hidden card-shadow">
-              {item.image_url ? (
+              {service.image_url ? (
                 <img
-                  src={item.image_url}
-                  alt={item.title}
+                  src={service.image_url}
+                  alt={service.title}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
                   <div className="text-center space-y-2">
                     <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                      <Calendar className="w-8 h-8 text-primary" />
+                      <Clock className="w-8 h-8 text-primary" />
                     </div>
                     <p className="text-muted-foreground">No image available</p>
                   </div>
@@ -243,18 +245,15 @@ const ItemDetail = () => {
             <div>
               <div className="flex items-center space-x-2 mb-2">
                 <Badge variant="secondary">
-                  {item.categories?.name || 'Uncategorized'}
+                  {service.categories?.name || 'Service'}
                 </Badge>
-                <Badge variant={item.condition === 'new' ? 'success' : 'secondary'}>
-                  {item.condition || 'Good'}
-                </Badge>
-                {item.is_available && (
+                {service.is_available && (
                   <Badge variant="success">Available</Badge>
                 )}
               </div>
               
-              <h1 className="text-3xl font-bold mb-2">{item.title}</h1>
-              <p className="text-muted-foreground text-lg">{item.description}</p>
+              <h1 className="text-3xl font-bold mb-2">{service.title}</h1>
+              <p className="text-muted-foreground text-lg">{service.description}</p>
             </div>
 
             {/* Price */}
@@ -265,15 +264,13 @@ const ItemDetail = () => {
                     <div className="flex items-center space-x-2">
                       <Clock className="w-5 h-5 text-primary" />
                       <span className="text-2xl font-bold text-primary">
-                        ${item.daily_rate}
+                        ${service.hourly_rate}
                       </span>
-                      <span className="text-muted-foreground">per day</span>
+                      <span className="text-muted-foreground">per hour</span>
                     </div>
-                    {item.deposit_amount && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Deposit: ${item.deposit_amount}
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Minimum {service.duration_hours} hour(s)
+                    </p>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Shield className="w-4 h-4 text-success" />
@@ -286,42 +283,41 @@ const ItemDetail = () => {
             {/* Location */}
             <div className="flex items-center space-x-2 text-muted-foreground">
               <MapPin className="w-5 h-5" />
-              <span>{item.location || 'Location not specified'}</span>
+              <span>{service.location || 'Location not specified'}</span>
             </div>
 
-            {/* Owner Info */}
+            {/* Provider Info */}
             <Card className="card-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarImage src={item.profiles?.avatar_url} />
+                      <AvatarImage src={service.profiles?.avatar_url} />
                       <AvatarFallback>
-                        {item.profiles?.full_name?.charAt(0) || 'U'}
+                        {service.profiles?.full_name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">
-                        {item.profiles?.full_name || 'Unknown User'}
+                        {service.profiles?.full_name || 'Unknown User'}
                       </h3>
-                      {item.profiles?.rating && (
+                      {service.profiles?.rating && (
                         <div className="flex items-center space-x-1">
                           <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm">
-                            {item.profiles.rating.toFixed(1)} ({item.profiles.total_ratings || 0} reviews)
+                            {service.profiles.rating.toFixed(1)} ({service.profiles.total_ratings || 0} reviews)
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  {!isOwner && (
+                  {!isProvider && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Navigate to chat with owner
-                        navigate(`/chat?user=${item.owner_id}`);
+                        navigate(`/chat?user=${service.provider_id}`);
                       }}
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
@@ -330,41 +326,41 @@ const ItemDetail = () => {
                   )}
                 </div>
                 
-                {item.profiles?.bio && (
+                {service.profiles?.bio && (
                   <p className="text-sm text-muted-foreground mt-3">
-                    {item.profiles.bio}
+                    {service.profiles.bio}
                   </p>
                 )}
               </CardContent>
             </Card>
 
             {/* Booking Section */}
-            {!isOwner && item.is_available && (
+            {!isProvider && service.is_available && (
               <Card className="card-shadow">
                 <CardContent className="p-6 space-y-4">
-                  <h3 className="font-semibold text-lg">Select Dates</h3>
+                  <h3 className="font-semibold text-lg">Book This Service</h3>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">From</label>
+                      <Label className="text-sm font-medium mb-2 block">Select Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal",
-                              !borrowDate && "text-muted-foreground"
+                              !bookingDate && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {borrowDate ? format(borrowDate, "PPP") : "Pick a date"}
+                            {bookingDate ? format(bookingDate, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <Calendar
                             mode="single"
-                            selected={borrowDate}
-                            onSelect={setBorrowDate}
+                            selected={bookingDate}
+                            onSelect={setBookingDate}
                             disabled={(date) => date < new Date()}
                             initialFocus
                             className="p-3 pointer-events-auto"
@@ -373,57 +369,45 @@ const ItemDetail = () => {
                       </Popover>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">To</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !returnDate && "text-muted-foreground"
-                            )}
-                            disabled={!borrowDate}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {returnDate ? format(returnDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={returnDate}
-                            onSelect={setReturnDate}
-                            disabled={(date) => !borrowDate || date <= borrowDate}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="time">Time</Label>
+                        <Input
+                          id="time"
+                          type="time"
+                          value={bookingTime}
+                          onChange={(e) => setBookingTime(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="duration">Duration (hours)</Label>
+                        <Input
+                          id="duration"
+                          type="number"
+                          min={service.duration_hours}
+                          value={duration}
+                          onChange={(e) => setDuration(e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {borrowDate && returnDate && (
+                  {bookingDate && bookingTime && duration && (
                     <div className="bg-primary/5 p-4 rounded-lg space-y-2">
                       <div className="flex justify-between">
                         <span>Duration:</span>
-                        <span>{differenceInDays(returnDate, borrowDate) + 1} days</span>
+                        <span>{duration} hour(s)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Daily rate:</span>
-                        <span>${item.daily_rate}</span>
+                        <span>Hourly rate:</span>
+                        <span>${service.hourly_rate}</span>
                       </div>
-                      {item.deposit_amount && (
-                        <div className="flex justify-between">
-                          <span>Deposit:</span>
-                          <span>${item.deposit_amount}</span>
-                        </div>
-                      )}
                       <hr />
                       <div className="flex justify-between font-semibold text-lg">
                         <span>Total:</span>
                         <span className="text-primary">
-                          ${calculateTotal() + (item.deposit_amount || 0)}
+                          ${calculateTotal()}
                         </span>
                       </div>
                     </div>
@@ -433,27 +417,27 @@ const ItemDetail = () => {
                     variant="hero"
                     size="lg"
                     className="w-full"
-                    onClick={handleBorrowRequest}
-                    disabled={!borrowDate || !returnDate || isSubmitting}
+                    onClick={handleBookingRequest}
+                    disabled={!bookingDate || !bookingTime || !duration || isSubmitting}
                   >
-                    {isSubmitting ? "Sending Request..." : "Request to Borrow"}
+                    {isSubmitting ? "Sending Request..." : "Request Booking"}
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            {isOwner && (
+            {isProvider && (
               <Card className="card-shadow">
                 <CardContent className="p-6 text-center">
-                  <h3 className="font-semibold text-lg mb-2">This is your item</h3>
+                  <h3 className="font-semibold text-lg mb-2">This is your service</h3>
                   <p className="text-muted-foreground mb-4">
-                    You can edit or manage this listing from your profile
+                    You can edit or manage this service from your profile
                   </p>
                   <Button
                     variant="outline"
                     onClick={() => navigate('/profile')}
                   >
-                    Manage Listing
+                    Manage Service
                   </Button>
                 </CardContent>
               </Card>
@@ -465,4 +449,4 @@ const ItemDetail = () => {
   );
 };
 
-export default ItemDetail;
+export default ServiceDetail;

@@ -14,33 +14,30 @@ import {
   MessageCircle, 
   User, 
   ShoppingBag,
-  Smartphone,
-  Car,
-  Home as HomeIcon,
-  Gamepad2,
-  Camera,
-  Wrench,
   Star,
   MapPin,
-  Clock
+  Clock,
+  Wrench
 } from 'lucide-react';
 
-interface Item {
+interface Service {
   id: string;
   title: string;
   description: string;
-  daily_rate: number;
+  hourly_rate: number;
   image_url: string;
   category_id: string;
   location: string;
-  condition: string;
-  owner_id: string;
+  provider_id: string;
   is_available: boolean;
+  duration_hours: number;
+  rating: number;
+  total_ratings: number;
   profiles?: {
     full_name: string;
     avatar_url: string;
     rating: number;
-  } | null;
+  };
   categories?: {
     name: string;
     icon: string;
@@ -53,10 +50,10 @@ interface Category {
   icon: string;
 }
 
-const Home = () => {
+const Services = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [items, setItems] = useState<Item[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -82,17 +79,17 @@ const Home = () => {
         setCategories(categoriesData);
       }
 
-      // Fetch items with profile and category data
-      const { data: itemsData } = await supabase
-        .from('items')
+      // Fetch services with profile and category data
+      const { data: servicesData } = await supabase
+        .from('services')
         .select(`
           *,
-          profiles!items_owner_id_fkey (
+          profiles!services_provider_id_fkey (
             full_name,
             avatar_url,
             rating
           ),
-          categories!items_category_id_fkey (
+          categories!services_category_id_fkey (
             name,
             icon
           )
@@ -100,8 +97,8 @@ const Home = () => {
         .eq('is_available', true)
         .order('created_at', { ascending: false });
 
-      if (itemsData) {
-        setItems(itemsData);
+      if (servicesData) {
+        setServices(servicesData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -110,32 +107,19 @@ const Home = () => {
     }
   };
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || item.category_id === selectedCategory;
+  const filteredServices = services.filter(service => {
+    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         service.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || service.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const getCategoryIcon = (iconName: string) => {
-    const iconMap: Record<string, React.ComponentType<any>> = {
-      smartphone: Smartphone,
-      car: Car,
-      home: HomeIcon,
-      gamepad2: Gamepad2,
-      camera: Camera,
-      wrench: Wrench,
-    };
-    const IconComponent = iconMap[iconName] || HomeIcon;
-    return <IconComponent className="w-5 h-5" />;
-  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Loading your marketplace...</p>
+          <p className="text-muted-foreground">Loading services...</p>
         </div>
       </div>
     );
@@ -146,9 +130,17 @@ const Home = () => {
       {/* Header */}
       <header className="bg-card border-b sticky top-0 z-50 card-shadow">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold gradient-text">BorrowPal</h1>
+          <h1 className="text-2xl font-bold gradient-text">Services</h1>
           
           <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/home')}
+            >
+              <ShoppingBag className="w-5 h-5" />
+            </Button>
+            
             <Button
               variant="ghost"
               size="icon"
@@ -191,7 +183,7 @@ const Home = () => {
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
-              placeholder="Search for items to borrow..."
+              placeholder="Search for services..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-12 h-12 text-lg"
@@ -208,14 +200,14 @@ const Home = () => {
 
         {/* Categories */}
         <div className="space-y-4 slide-up">
-          <h2 className="text-xl font-semibold">Browse Categories</h2>
+          <h2 className="text-xl font-semibold">Browse Service Categories</h2>
           <div className="categories-grid">
             <Button
               variant={selectedCategory === '' ? 'default' : 'outline'}
               onClick={() => setSelectedCategory('')}
               className="flex flex-col items-center p-4 h-auto space-y-2"
             >
-              <HomeIcon className="w-6 h-6" />
+              <Wrench className="w-6 h-6" />
               <span className="text-sm">All</span>
             </Button>
             {categories.map((category) => (
@@ -225,100 +217,100 @@ const Home = () => {
                 onClick={() => setSelectedCategory(category.id)}
                 className="flex flex-col items-center p-4 h-auto space-y-2"
               >
-                {getCategoryIcon(category.icon)}
+                <Wrench className="w-6 h-6" />
                 <span className="text-sm">{category.name}</span>
               </Button>
             ))}
           </div>
         </div>
 
-        {/* Featured Items */}
+        {/* Services Grid */}
         <div className="space-y-4 slide-up">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
-              {selectedCategory ? 'Filtered Items' : 'Available Items'}
+              {selectedCategory ? 'Filtered Services' : 'Available Services'}
             </h2>
             <Button
               variant="hero"
-              onClick={() => navigate('/add-listing')}
+              onClick={() => navigate('/add-listing?type=service')}
               className="flex items-center space-x-2"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Item</span>
+              <span>Add Service</span>
             </Button>
           </div>
 
-          {filteredItems.length === 0 ? (
+          {filteredServices.length === 0 ? (
             <div className="text-center py-12 space-y-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8 text-muted-foreground" />
+                <Wrench className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-medium">No items found</h3>
+              <h3 className="text-lg font-medium">No services found</h3>
               <p className="text-muted-foreground">
                 {searchQuery || selectedCategory 
                   ? 'Try adjusting your search or filter criteria'
-                  : 'Be the first to add an item to the community!'
+                  : 'Be the first to offer a service to the community!'
                 }
               </p>
               <Button
                 variant="hero"
-                onClick={() => navigate('/add-listing')}
+                onClick={() => navigate('/add-listing?type=service')}
               >
-                Add First Item
+                Add First Service
               </Button>
             </div>
           ) : (
             <div className="items-grid">
-              {filteredItems.map((item) => (
+              {filteredServices.map((service) => (
                 <Card
-                  key={item.id}
+                  key={service.id}
                   className="cursor-pointer interactive-hover card-shadow"
-                  onClick={() => navigate(`/item/${item.id}`)}
+                  onClick={() => navigate(`/service/${service.id}`)}
                 >
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                    {item.image_url ? (
+                    {service.image_url ? (
                       <img
-                        src={item.image_url}
-                        alt={item.title}
+                        src={service.image_url}
+                        alt={service.title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <Camera className="w-8 h-8 text-muted-foreground" />
+                        <Wrench className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
                     <Badge
                       variant="secondary"
                       className="absolute top-2 left-2 bg-card/90 backdrop-blur-sm"
                     >
-                      {item.categories?.name || 'Uncategorized'}
+                      {service.categories?.name || 'Service'}
                     </Badge>
                   </div>
                   
                   <CardContent className="p-4 space-y-3">
                     <div>
-                      <h3 className="font-semibold line-clamp-1">{item.title}</h3>
+                      <h3 className="font-semibold line-clamp-1">{service.title}</h3>
                       <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                        {item.description}
+                        {service.description}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={item.profiles?.avatar_url} />
+                          <AvatarImage src={service.profiles?.avatar_url} />
                           <AvatarFallback className="text-xs">
-                            {item.profiles?.full_name?.charAt(0) || 'U'}
+                            {service.profiles?.full_name?.charAt(0) || 'U'}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-muted-foreground">
-                          {item.profiles?.full_name || 'Unknown'}
+                          {service.profiles?.full_name || 'Unknown'}
                         </span>
-                        {item.profiles?.rating && (
+                        {service.profiles?.rating && (
                           <div className="flex items-center">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                             <span className="text-xs text-muted-foreground ml-1">
-                              {item.profiles.rating.toFixed(1)}
+                              {service.profiles.rating.toFixed(1)}
                             </span>
                           </div>
                         )}
@@ -328,18 +320,18 @@ const Home = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm text-muted-foreground">
                         <MapPin className="w-3 h-3 mr-1" />
-                        <span>{item.location || 'Location not set'}</span>
+                        <span>{service.location || 'Location not set'}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="w-3 h-3 text-muted-foreground" />
                         <span className="text-sm font-medium text-primary">
-                          ${item.daily_rate}/day
+                          ${service.hourly_rate}/hr
                         </span>
                       </div>
                     </div>
 
-                    <Badge variant={item.condition === 'new' ? 'success' : 'secondary'}>
-                      {item.condition || 'Good'}
+                    <Badge variant="success">
+                      Available
                     </Badge>
                   </CardContent>
                 </Card>
@@ -352,4 +344,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Services;
