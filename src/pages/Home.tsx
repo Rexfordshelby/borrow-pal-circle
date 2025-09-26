@@ -44,7 +44,7 @@ interface Item {
   categories?: {
     name: string;
     icon: string;
-  };
+  } | null;
 }
 
 interface Category {
@@ -82,26 +82,36 @@ const Home = () => {
         setCategories(categoriesData);
       }
 
-      // Fetch items with profile and category data
+      // Fetch items and their profile/category data separately  
       const { data: itemsData } = await supabase
         .from('items')
-        .select(`
-          *,
-          profiles!items_owner_id_fkey (
-            full_name,
-            avatar_url,
-            rating
-          ),
-          categories!items_category_id_fkey (
-            name,
-            icon
-          )
-        `)
+        .select('*')
         .eq('is_available', true)
         .order('created_at', { ascending: false });
 
       if (itemsData) {
-        setItems(itemsData);
+        // Fetch profiles for item owners
+        const ownerIds = itemsData.map(item => item.owner_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, rating')
+          .in('user_id', ownerIds);
+
+        // Fetch categories for items
+        const categoryIds = itemsData.map(item => item.category_id).filter(Boolean);
+        const { data: categoriesData } = await supabase
+          .from('categories')
+          .select('id, name, icon')
+          .in('id', categoryIds);
+
+        // Merge the data
+        const enrichedItems = itemsData.map(item => ({
+          ...item,
+          profiles: profilesData?.find(p => p.user_id === item.owner_id) || null,
+          categories: categoriesData?.find(c => c.id === item.category_id) || null
+        }));
+
+        setItems(enrichedItems);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

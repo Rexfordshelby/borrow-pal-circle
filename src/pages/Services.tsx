@@ -37,11 +37,11 @@ interface Service {
     full_name: string;
     avatar_url: string;
     rating: number;
-  };
+  } | null;
   categories?: {
     name: string;
     icon: string;
-  };
+  } | null;
 }
 
 interface Category {
@@ -79,26 +79,36 @@ const Services = () => {
         setCategories(categoriesData);
       }
 
-      // Fetch services with profile and category data
+      // Fetch services and their profile/category data separately
       const { data: servicesData } = await supabase
         .from('services')
-        .select(`
-          *,
-          profiles!services_provider_id_fkey (
-            full_name,
-            avatar_url,
-            rating
-          ),
-          categories!services_category_id_fkey (
-            name,
-            icon
-          )
-        `)
+        .select('*')
         .eq('is_available', true)
         .order('created_at', { ascending: false });
 
       if (servicesData) {
-        setServices(servicesData);
+        // Fetch profiles for service providers
+        const providerIds = servicesData.map(service => service.provider_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, rating')
+          .in('user_id', providerIds);
+
+        // Fetch categories for services
+        const categoryIds = servicesData.map(service => service.category_id).filter(Boolean);
+        const { data: categoriesData } = await supabase
+          .from('categories')
+          .select('id, name, icon')
+          .in('id', categoryIds);
+
+        // Merge the data
+        const enrichedServices = servicesData.map(service => ({
+          ...service,
+          profiles: profilesData?.find(p => p.user_id === service.provider_id) || null,
+          categories: categoriesData?.find(c => c.id === service.category_id) || null
+        }));
+
+        setServices(enrichedServices);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

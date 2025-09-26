@@ -105,7 +105,6 @@ const AddListing = () => {
         return null;
       }
 
-      const bucketName = listingType === 'service' ? 'service-photos' : 'item-photos';
       const { data } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath);
