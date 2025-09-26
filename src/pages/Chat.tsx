@@ -118,7 +118,11 @@ const Chat = () => {
         .from('chat_rooms')
         .select(`
           *,
-          profiles!chat_rooms_participant_1_fkey (
+          participant_1_profile:profiles!participant_1 (
+            full_name,
+            avatar_url
+          ),
+          participant_2_profile:profiles!participant_2 (
             full_name,
             avatar_url
           )
@@ -132,10 +136,15 @@ const Chat = () => {
       }
 
       if (data) {
-        const roomsWithOtherUser = data.map(room => ({
-          ...room,
-          other_user: room.profiles || { full_name: 'Unknown User', avatar_url: null }
-        }));
+        const roomsWithOtherUser = data.map(room => {
+          const otherUser = room.participant_1 === user?.id 
+            ? room.participant_2_profile 
+            : room.participant_1_profile;
+          return {
+            ...room,
+            other_user: otherUser || { full_name: 'Unknown User', avatar_url: null }
+          };
+        });
         setChatRooms(roomsWithOtherUser as any);
       }
     } catch (error) {

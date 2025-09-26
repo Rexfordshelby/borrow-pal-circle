@@ -42,7 +42,32 @@ const Notifications = () => {
       return;
     }
     fetchNotifications();
-  }, [user, navigate]);
+    
+    // Set up real-time notifications
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          setNotifications(prev => [payload.new as Notification, ...prev]);
+          toast({
+            title: "New Notification",
+            description: (payload.new as Notification).title,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, navigate, toast]);
 
   const fetchNotifications = async () => {
     try {
@@ -137,8 +162,11 @@ const Notifications = () => {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read if not already read
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
     
     // Navigate based on notification type
     switch (notification.type) {
@@ -151,7 +179,11 @@ const Notifications = () => {
         navigate('/orders');
         break;
       case 'message':
-        navigate('/chat');
+        if (notification.reference_id) {
+          navigate(`/chat/${notification.reference_id}`);
+        } else {
+          navigate('/chat');
+        }
         break;
       case 'payment':
         navigate('/orders');

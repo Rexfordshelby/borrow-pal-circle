@@ -33,7 +33,7 @@ interface Service {
   duration_hours: number;
   rating: number;
   total_ratings: number;
-  profiles?: {
+  provider_profile?: {
     full_name: string;
     avatar_url: string;
     rating: number;
@@ -104,7 +104,7 @@ const Services = () => {
         // Merge the data
         const enrichedServices = servicesData.map(service => ({
           ...service,
-          profiles: profilesData?.find(p => p.user_id === service.provider_id) || null,
+          provider_profile: profilesData?.find(p => p.user_id === service.provider_id) || null,
           categories: categoriesData?.find(c => c.id === service.category_id) || null
         }));
 
@@ -308,19 +308,19 @@ const Services = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={service.profiles?.avatar_url} />
+                          <AvatarImage src={service.provider_profile?.avatar_url} />
                           <AvatarFallback className="text-xs">
-                            {service.profiles?.full_name?.charAt(0) || 'U'}
+                            {service.provider_profile?.full_name?.charAt(0) || 'U'}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-muted-foreground">
-                          {service.profiles?.full_name || 'Unknown'}
+                          {service.provider_profile?.full_name || 'Unknown'}
                         </span>
-                        {service.profiles?.rating && (
+                        {service.provider_profile?.rating && (
                           <div className="flex items-center">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                             <span className="text-xs text-muted-foreground ml-1">
-                              {service.profiles.rating.toFixed(1)}
+                              {service.provider_profile.rating.toFixed(1)}
                             </span>
                           </div>
                         )}

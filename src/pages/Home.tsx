@@ -36,7 +36,7 @@ interface Item {
   condition: string;
   owner_id: string;
   is_available: boolean;
-  profiles?: {
+  owner_profile?: {
     full_name: string;
     avatar_url: string;
     rating: number;
@@ -107,7 +107,7 @@ const Home = () => {
         // Merge the data
         const enrichedItems = itemsData.map(item => ({
           ...item,
-          profiles: profilesData?.find(p => p.user_id === item.owner_id) || null,
+          owner_profile: profilesData?.find(p => p.user_id === item.owner_id) || null,
           categories: categoriesData?.find(c => c.id === item.category_id) || null
         }));
 
@@ -316,19 +316,19 @@ const Home = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={item.profiles?.avatar_url} />
+                          <AvatarImage src={item.owner_profile?.avatar_url} />
                           <AvatarFallback className="text-xs">
-                            {item.profiles?.full_name?.charAt(0) || 'U'}
+                            {item.owner_profile?.full_name?.charAt(0) || 'U'}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-muted-foreground">
-                          {item.profiles?.full_name || 'Unknown'}
+                          {item.owner_profile?.full_name || 'Unknown'}
                         </span>
-                        {item.profiles?.rating && (
+                        {item.owner_profile?.rating && (
                           <div className="flex items-center">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                             <span className="text-xs text-muted-foreground ml-1">
-                              {item.profiles.rating.toFixed(1)}
+                              {item.owner_profile.rating.toFixed(1)}
                             </span>
                           </div>
                         )}

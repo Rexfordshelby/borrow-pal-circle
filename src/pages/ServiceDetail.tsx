@@ -38,7 +38,7 @@ interface Service {
   duration_hours: number;
   rating: number;
   total_ratings: number;
-  profiles?: {
+  provider_profile?: {
     full_name: string;
     avatar_url: string;
     rating: number;
@@ -78,14 +78,14 @@ const ServiceDetail = () => {
         .from('services')
         .select(`
           *,
-          profiles!services_provider_id_fkey (
+          provider_profile:profiles!provider_id (
             full_name,
             avatar_url,
             rating,
             total_ratings,
             bio
           ),
-          categories!services_category_id_fkey (
+          categories (
             name,
             icon
           )
@@ -292,20 +292,20 @@ const ServiceDetail = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarImage src={service.profiles?.avatar_url} />
+                      <AvatarImage src={service.provider_profile?.avatar_url} />
                       <AvatarFallback>
-                        {service.profiles?.full_name?.charAt(0) || 'U'}
+                        {service.provider_profile?.full_name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">
-                        {service.profiles?.full_name || 'Unknown User'}
+                        {service.provider_profile?.full_name || 'Unknown User'}
                       </h3>
-                      {service.profiles?.rating && (
+                      {service.provider_profile?.rating && (
                         <div className="flex items-center space-x-1">
                           <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm">
-                            {service.profiles.rating.toFixed(1)} ({service.profiles.total_ratings || 0} reviews)
+                            {service.provider_profile.rating.toFixed(1)} ({service.provider_profile.total_ratings || 0} reviews)
                           </span>
                         </div>
                       )}
@@ -313,22 +313,17 @@ const ServiceDetail = () => {
                   </div>
                   
                   {!isProvider && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigate(`/chat?user=${service.provider_id}`);
-                      }}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Message
-                    </Button>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Messages are available after booking acceptance
+                      </p>
+                    </div>
                   )}
                 </div>
                 
-                {service.profiles?.bio && (
+                {service.provider_profile?.bio && (
                   <p className="text-sm text-muted-foreground mt-3">
-                    {service.profiles.bio}
+                    {service.provider_profile.bio}
                   </p>
                 )}
               </CardContent>

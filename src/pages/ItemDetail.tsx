@@ -35,7 +35,7 @@ interface Item {
   owner_id: string;
   deposit_amount: number;
   is_available: boolean;
-  profiles?: {
+  owner_profile?: {
     full_name: string;
     avatar_url: string;
     rating: number;
@@ -74,14 +74,14 @@ const ItemDetail = () => {
         .from('items')
         .select(`
           *,
-          profiles!items_owner_id_fkey (
+          owner_profile:profiles!owner_id (
             full_name,
             avatar_url,
             rating,
             total_ratings,
             bio
           ),
-          categories!items_category_id_fkey (
+          categories (
             name,
             icon
           )
@@ -295,20 +295,20 @@ const ItemDetail = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarImage src={item.profiles?.avatar_url} />
+                      <AvatarImage src={item.owner_profile?.avatar_url} />
                       <AvatarFallback>
-                        {item.profiles?.full_name?.charAt(0) || 'U'}
+                        {item.owner_profile?.full_name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">
-                        {item.profiles?.full_name || 'Unknown User'}
+                        {item.owner_profile?.full_name || 'Unknown User'}
                       </h3>
-                      {item.profiles?.rating && (
+                      {item.owner_profile?.rating && (
                         <div className="flex items-center space-x-1">
                           <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm">
-                            {item.profiles.rating.toFixed(1)} ({item.profiles.total_ratings || 0} reviews)
+                            {item.owner_profile.rating.toFixed(1)} ({item.owner_profile.total_ratings || 0} reviews)
                           </span>
                         </div>
                       )}
@@ -316,23 +316,17 @@ const ItemDetail = () => {
                   </div>
                   
                   {!isOwner && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        // Navigate to chat with owner
-                        navigate(`/chat?user=${item.owner_id}`);
-                      }}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Message
-                    </Button>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Messages are available after order acceptance
+                      </p>
+                    </div>
                   )}
                 </div>
                 
-                {item.profiles?.bio && (
+                {item.owner_profile?.bio && (
                   <p className="text-sm text-muted-foreground mt-3">
-                    {item.profiles.bio}
+                    {item.owner_profile.bio}
                   </p>
                 )}
               </CardContent>
