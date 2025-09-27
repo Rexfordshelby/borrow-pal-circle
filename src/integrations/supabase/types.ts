@@ -228,6 +228,7 @@ export type Database = {
           is_read: boolean | null
           message: string
           reference_id: string | null
+          reference_type: string | null
           title: string
           type: string
           user_id: string
@@ -238,6 +239,7 @@ export type Database = {
           is_read?: boolean | null
           message: string
           reference_id?: string | null
+          reference_type?: string | null
           title: string
           type: string
           user_id: string
@@ -248,6 +250,7 @@ export type Database = {
           is_read?: boolean | null
           message?: string
           reference_id?: string | null
+          reference_type?: string | null
           title?: string
           type?: string
           user_id?: string

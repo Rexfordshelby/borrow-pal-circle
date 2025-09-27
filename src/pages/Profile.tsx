@@ -104,25 +104,39 @@ const Profile = () => {
 
   const fetchUserItems = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch items
+      const { data: itemsData, error: itemsError } = await supabase
         .from('items')
-        .select(`
-          *,
-          categories:category_id (
-            name
-          )
-        `)
+        .select('*')
         .eq('owner_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching user items:', error);
+      if (itemsError) {
+        console.error('Error fetching user items:', itemsError);
         return;
       }
 
-      if (data) {
-        setUserItems(data);
+      // Then fetch categories for each item
+      const itemsWithCategories = [];
+      for (const item of itemsData || []) {
+        let categoryData = null;
+        if (item.category_id) {
+          const { data: category } = await supabase
+            .from('categories')
+            .select('name')
+            .eq('id', item.category_id)
+            .single();
+          categoryData = category;
+        }
+        
+        itemsWithCategories.push({
+          ...item,
+          categories: categoryData
+        });
       }
+
+      setUserItems(itemsWithCategories);
+
     } catch (error) {
       console.error('Error fetching user items:', error);
     } finally {

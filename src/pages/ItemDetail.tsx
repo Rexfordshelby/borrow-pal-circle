@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import EnhancedLoading from '@/components/ui/enhanced-loading';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { 
   ArrowLeft, 
@@ -176,11 +177,19 @@ const ItemDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Loading item details...</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b sticky top-0 z-50 card-shadow">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+              <div className="w-20 h-4 bg-muted rounded animate-pulse"></div>
+            </div>
+            <div className="w-24 h-6 bg-muted rounded animate-pulse"></div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-6 max-w-4xl">
+          <EnhancedLoading type="profile" />
+        </main>
       </div>
     );
   }
