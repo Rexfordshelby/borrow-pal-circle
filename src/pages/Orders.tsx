@@ -101,19 +101,30 @@ const Orders = () => {
             title,
             image_url,
             daily_rate
-          ),
-          lender_profile:profiles!lender_id (
-            full_name,
-            avatar_url
           )
         `)
         .eq('borrower_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (borrowedError) {
+      // Fetch lender profiles for borrowed items
+      let borrowedWithProfiles: Transaction[] = [];
+      if (borrowedData && !borrowedError) {
+        for (const item of borrowedData) {
+          const { data: lenderProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', item.lender_id)
+            .single();
+          
+          borrowedWithProfiles.push({
+            ...item,
+            type: 'lending' as const,
+            lender_profile: lenderProfile || null
+          });
+        }
+        setBorrowedItems(borrowedWithProfiles);
+      } else if (borrowedError) {
         console.error('Error fetching borrowed items:', borrowedError);
-      } else if (borrowedData) {
-        setBorrowedItems(borrowedData.map(item => ({ ...item, type: 'lending' as const })) as Transaction[]);
       }
 
       // Fetch lent items (where user is lender)
@@ -125,19 +136,30 @@ const Orders = () => {
             title,
             image_url,
             daily_rate
-          ),
-          borrower_profile:profiles!borrower_id (
-            full_name,
-            avatar_url
           )
         `)
         .eq('lender_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (lentError) {
+      // Fetch borrower profiles for lent items
+      let lentWithProfiles: Transaction[] = [];
+      if (lentData && !lentError) {
+        for (const item of lentData) {
+          const { data: borrowerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', item.borrower_id)
+            .single();
+          
+          lentWithProfiles.push({
+            ...item,
+            type: 'lending' as const,
+            borrower_profile: borrowerProfile || null
+          });
+        }
+        setLentItems(lentWithProfiles);
+      } else if (lentError) {
         console.error('Error fetching lent items:', lentError);
-      } else if (lentData) {
-        setLentItems(lentData.map(item => ({ ...item, type: 'lending' as const })) as Transaction[]);
       }
 
       // Fetch requested services (where user is customer)
@@ -149,19 +171,30 @@ const Orders = () => {
             title,
             image_url,
             hourly_rate
-          ),
-          provider_profile:profiles!provider_id (
-            full_name,
-            avatar_url
           )
         `)
         .eq('customer_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (requestedError) {
+      // Fetch provider profiles for requested services
+      let requestedWithProfiles: Transaction[] = [];
+      if (requestedData && !requestedError) {
+        for (const service of requestedData) {
+          const { data: providerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', service.provider_id)
+            .single();
+          
+          requestedWithProfiles.push({
+            ...service,
+            type: 'service' as const,
+            provider_profile: providerProfile || null
+          });
+        }
+        setRequestedServices(requestedWithProfiles);
+      } else if (requestedError) {
         console.error('Error fetching requested services:', requestedError);
-      } else if (requestedData) {
-        setRequestedServices(requestedData.map(service => ({ ...service, type: 'service' as const })) as Transaction[]);
       }
 
       // Fetch provided services (where user is provider)
@@ -173,19 +206,30 @@ const Orders = () => {
             title,
             image_url,
             hourly_rate
-          ),
-          customer_profile:profiles!customer_id (
-            full_name,
-            avatar_url
           )
         `)
         .eq('provider_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (providedError) {
+      // Fetch customer profiles for provided services
+      let providedWithProfiles: Transaction[] = [];
+      if (providedData && !providedError) {
+        for (const service of providedData) {
+          const { data: customerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', service.customer_id)
+            .single();
+          
+          providedWithProfiles.push({
+            ...service,
+            type: 'service' as const,
+            customer_profile: customerProfile || null
+          });
+        }
+        setProvidedServices(providedWithProfiles);
+      } else if (providedError) {
         console.error('Error fetching provided services:', providedError);
-      } else if (providedData) {
-        setProvidedServices(providedData.map(service => ({ ...service, type: 'service' as const })) as Transaction[]);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
