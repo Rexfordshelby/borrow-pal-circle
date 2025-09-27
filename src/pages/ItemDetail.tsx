@@ -70,27 +70,15 @@ const ItemDetail = () => {
 
   const fetchItem = async () => {
     try {
-      const { data, error } = await supabase
+      // First, fetch the item
+      const { data: itemData, error: itemError } = await supabase
         .from('items')
-        .select(`
-          *,
-          owner_profile:profiles!owner_id (
-            full_name,
-            avatar_url,
-            rating,
-            total_ratings,
-            bio
-          ),
-          categories (
-            name,
-            icon
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error('Error fetching item:', error);
+      if (itemError || !itemData) {
+        console.error('Error fetching item:', itemError);
         toast({
           title: "Error",
           description: "Item not found",
@@ -100,7 +88,28 @@ const ItemDetail = () => {
         return;
       }
 
-      setItem(data as any);
+      // Fetch owner profile
+      const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, rating, total_ratings, bio')
+        .eq('user_id', itemData.owner_id)
+        .single();
+
+      // Fetch category
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('name, icon')
+        .eq('id', itemData.category_id)
+        .single();
+
+      // Combine the data
+      const combinedData = {
+        ...itemData,
+        owner_profile: ownerProfile || null,
+        categories: categoryData || null
+      };
+
+      setItem(combinedData);
     } catch (error) {
       console.error('Error fetching item:', error);
       navigate('/home');

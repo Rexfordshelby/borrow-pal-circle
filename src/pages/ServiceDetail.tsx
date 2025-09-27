@@ -74,27 +74,15 @@ const ServiceDetail = () => {
 
   const fetchService = async () => {
     try {
-      const { data, error } = await supabase
+      // First, fetch the service
+      const { data: serviceData, error: serviceError } = await supabase
         .from('services')
-        .select(`
-          *,
-          provider_profile:profiles!provider_id (
-            full_name,
-            avatar_url,
-            rating,
-            total_ratings,
-            bio
-          ),
-          categories (
-            name,
-            icon
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error('Error fetching service:', error);
+      if (serviceError || !serviceData) {
+        console.error('Error fetching service:', serviceError);
         toast({
           title: "Error",
           description: "Service not found",
@@ -104,7 +92,28 @@ const ServiceDetail = () => {
         return;
       }
 
-      setService(data as any);
+      // Fetch provider profile
+      const { data: providerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, rating, total_ratings, bio')
+        .eq('user_id', serviceData.provider_id)
+        .single();
+
+      // Fetch category
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('name, icon')
+        .eq('id', serviceData.category_id)
+        .single();
+
+      // Combine the data
+      const combinedData = {
+        ...serviceData,
+        provider_profile: providerProfile || null,
+        categories: categoryData || null
+      };
+
+      setService(combinedData);
     } catch (error) {
       console.error('Error fetching service:', error);
       navigate('/services');
