@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import EnhancedLoading from '@/components/ui/enhanced-loading';
+import StatusIndicator from '@/components/ui/status-indicator';
 import { format } from 'date-fns';
 import { 
   ArrowLeft, 
@@ -272,22 +274,7 @@ const Orders = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="warning"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      case 'accepted':
-        return <Badge variant="success"><CheckCircle className="w-3 h-3 mr-1" />Accepted</Badge>;
-      case 'declined':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>;
-      case 'ongoing':
-        return <Badge variant="default"><Package className="w-3 h-3 mr-1" />Ongoing</Badge>;
-      case 'completed':
-        return <Badge variant="success"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
-      case 'overdue':
-        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Overdue</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
+    return <StatusIndicator status={status} type="order" />;
   };
 
   const TransactionCard = ({ transaction, userType }: { transaction: Transaction; userType: 'requester' | 'provider' }) => {
@@ -427,11 +414,19 @@ const Orders = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Loading your orders...</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b sticky top-0 z-50 card-shadow">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+              <div className="w-20 h-4 bg-muted rounded animate-pulse"></div>
+            </div>
+            <div className="w-16 h-6 bg-muted rounded animate-pulse"></div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-6 max-w-4xl">
+          <EnhancedLoading type="list" />
+        </main>
       </div>
     );
   }
