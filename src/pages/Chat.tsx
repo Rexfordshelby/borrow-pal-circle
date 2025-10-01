@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useChatRealtime } from '@/hooks/useChatRealtime';
+import { OfferDialog } from '@/components/chat/OfferDialog';
+import { PaymentDialog } from '@/components/chat/PaymentDialog';
+import { OfferMessage } from '@/components/chat/OfferMessage';
 import { 
   ArrowLeft, 
   Send, 
@@ -15,7 +19,8 @@ import {
   MessageCircle,
   Plus,
   Phone,
-  Video
+  Video,
+  DollarSign
 } from 'lucide-react';
 
 interface ChatRoom {
@@ -36,8 +41,10 @@ interface Message {
   sender_id: string;
   created_at: string;
   message_type?: string;
-  offer_amount?: number;
-  offer_status?: string;
+  offer_type?: string;
+  offer_data?: any;
+  negotiation_status?: string;
+  payment_status?: string;
 }
 
 const Chat = () => {
@@ -53,6 +60,19 @@ const Chat = () => {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showOfferDialog, setShowOfferDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [offerType, setOfferType] = useState<'price_offer' | 'counter_offer'>('price_offer');
+  const [currentOffer, setCurrentOffer] = useState<any>(null);
+  const [orderContext, setOrderContext] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Real-time subscription
+  useChatRealtime({
+    chatRoomId: roomId,
+    onMessageReceived: () => roomId && fetchMessages(roomId),
+    onChatRoomUpdated: () => fetchChatRooms(),
+  });
 
   useEffect(() => {
     if (!user) {
@@ -61,7 +81,6 @@ const Chat = () => {
     }
     
     if (targetUserId && !roomId) {
-      // Create or find chat room with target user
       createOrFindChatRoom(targetUserId);
     } else {
       fetchChatRooms();
@@ -69,8 +88,14 @@ const Chat = () => {
     
     if (roomId) {
       fetchMessages(roomId);
+      fetchOrderContext(roomId);
     }
   }, [user, navigate, roomId, targetUserId]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const createOrFindChatRoom = async (otherUserId: string) => {
     try {
@@ -175,6 +200,44 @@ const Chat = () => {
     }
   };
 
+  const fetchOrderContext = async (chatRoomId: string) => {
+    try {
+      // Try to find related order from transactions or bookings
+      const { data: lendingData } = await supabase
+        .from('lending_transactions')
+        .select('*, items(*)')
+        .or(`borrower_id.eq.${user?.id},lender_id.eq.${user?.id}`)
+        .limit(1)
+        .single();
+
+      if (lendingData) {
+        setOrderContext({
+          type: 'item',
+          title: lendingData.items.title,
+          orderId: lendingData.id,
+        });
+        return;
+      }
+
+      const { data: serviceData } = await supabase
+        .from('service_bookings')
+        .select('*, services(*)')
+        .or(`customer_id.eq.${user?.id},provider_id.eq.${user?.id}`)
+        .limit(1)
+        .single();
+
+      if (serviceData) {
+        setOrderContext({
+          type: 'service',
+          title: serviceData.services.title,
+          orderId: serviceData.id,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching order context:', error);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !roomId || !user) return;
 
@@ -198,7 +261,6 @@ const Chat = () => {
         return;
       }
 
-      // Update chat room last message
       await supabase
         .from('chat_rooms')
         .update({
@@ -208,10 +270,99 @@ const Chat = () => {
         .eq('id', roomId);
 
       setNewMessage('');
-      fetchMessages(roomId);
     } catch (error) {
       console.error('Error sending message:', error);
     }
+  };
+
+  const handleSendOffer = async (offerData: { amount: number; message: string }) => {
+    if (!roomId || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          chat_room_id: roomId,
+          sender_id: user.id,
+          content: offerData.message || `Offer: $${offerData.amount}`,
+          message_type: 'offer',
+          offer_type: offerType,
+          offer_data: { amount: offerData.amount, message: offerData.message },
+          negotiation_status: 'pending',
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Offer Sent",
+        description: "Your offer has been sent successfully",
+      });
+
+      await supabase
+        .from('chat_rooms')
+        .update({
+          last_message: `Offer: $${offerData.amount}`,
+          last_message_at: new Date().toISOString()
+        })
+        .eq('id', roomId);
+
+    } catch (error) {
+      console.error('Error sending offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send offer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAcceptOffer = async (messageId: string, offerData: any) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ negotiation_status: 'accepted' })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Offer Accepted",
+        description: "The offer has been accepted. You can now proceed with payment.",
+      });
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept offer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeclineOffer = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ negotiation_status: 'declined' })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Offer Declined",
+        description: "The offer has been declined",
+      });
+    } catch (error) {
+      console.error('Error declining offer:', error);
+    }
+  };
+
+  const handlePayment = () => {
+    setShowPaymentDialog(false);
+    toast({
+      title: "Payment Initiated",
+      description: "Complete payment in the new tab",
+    });
   };
 
   if (loading) {
@@ -378,29 +529,59 @@ const Chat = () => {
                 }`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.sender_id === user?.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                  className={`max-w-xs lg:max-w-md ${
+                    message.message_type === 'offer' ? 'w-full' : ''
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.sender_id === user?.id
-                        ? 'text-primary-foreground/70'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {new Date(message.created_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                  {message.message_type === 'offer' && message.offer_data ? (
+                    <OfferMessage
+                      offer={{
+                        id: message.id,
+                        amount: message.offer_data.amount,
+                        message: message.offer_data.message,
+                        type: message.offer_type as any,
+                        status: message.negotiation_status as any,
+                      }}
+                      isOwnMessage={message.sender_id === user?.id}
+                      onAccept={() => handleAcceptOffer(message.id, message.offer_data)}
+                      onDecline={() => handleDeclineOffer(message.id)}
+                      onCounterOffer={() => {
+                        setOfferType('counter_offer');
+                        setShowOfferDialog(true);
+                      }}
+                      onPay={() => {
+                        setCurrentOffer(message.offer_data);
+                        setShowPaymentDialog(true);
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className={`px-4 py-2 rounded-lg ${
+                        message.sender_id === user?.id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p
+                        className={`text-xs mt-1 ${
+                          message.sender_id === user?.id
+                            ? 'text-primary-foreground/70'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
           )}
+          <div ref={messagesEndRef} />
         </div>
       </main>
 
@@ -408,8 +589,16 @@ const Chat = () => {
       <footer className="bg-card border-t p-4">
         <div className="container mx-auto max-w-2xl">
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon">
-              <Plus className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => {
+                setOfferType('price_offer');
+                setShowOfferDialog(true);
+              }}
+              title="Make an offer"
+            >
+              <DollarSign className="w-4 h-4" />
             </Button>
             
             <div className="flex-1 flex items-center space-x-2">
@@ -432,6 +621,24 @@ const Chat = () => {
           </div>
         </div>
       </footer>
+
+      {/* Dialogs */}
+      <OfferDialog
+        open={showOfferDialog}
+        onOpenChange={setShowOfferDialog}
+        onSubmit={handleSendOffer}
+        type={offerType}
+      />
+
+      {orderContext && currentOffer && (
+        <PaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          amount={currentOffer.amount}
+          orderDetails={orderContext}
+          onSuccess={handlePayment}
+        />
+      )}
     </div>
   );
 };

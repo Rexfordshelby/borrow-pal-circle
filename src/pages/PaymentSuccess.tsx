@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   CheckCircle, 
   Home, 
@@ -23,11 +24,18 @@ const PaymentSuccess = () => {
   const { toast } = useToast();
 
   const paymentData = location.state?.paymentData;
-  const sessionId = location.state?.sessionId;
+  const sessionId = location.state?.sessionId || new URLSearchParams(location.search).get('session_id');
+  const [verifying, setVerifying] = useState(!!sessionId && !location.state);
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
+      return;
+    }
+
+    // If we have a session_id from URL but no state, verify the payment
+    if (sessionId && !paymentData) {
+      verifyPayment(sessionId);
       return;
     }
 
@@ -36,12 +44,37 @@ const PaymentSuccess = () => {
       return;
     }
 
-    // Show success toast
     toast({
       title: "Payment Successful!",
       description: "Your order has been confirmed and the owner has been notified.",
     });
-  }, [user, navigate, paymentData, toast]);
+  }, [user, navigate, paymentData, sessionId, toast]);
+
+  const verifyPayment = async (sid: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-payment', {
+        body: { session_id: sid }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Payment Verified!",
+          description: "Your payment has been confirmed.",
+        });
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      toast({
+        title: "Verification Issue",
+        description: "Payment completed but verification pending. Check your orders page.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleGoHome = () => {
     navigate('/home');
@@ -55,12 +88,12 @@ const PaymentSuccess = () => {
     navigate('/chat');
   };
 
-  if (!paymentData) {
+  if (!paymentData || verifying) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{verifying ? 'Verifying payment...' : 'Loading...'}</p>
         </div>
       </div>
     );

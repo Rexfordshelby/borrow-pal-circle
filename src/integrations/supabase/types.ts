@@ -127,12 +127,17 @@ export type Database = {
           borrow_date: string
           borrower_id: string
           created_at: string
+          delivery_address: string | null
+          delivery_notes: string | null
+          delivery_type: string | null
           deposit_amount: number | null
           due_date: string
           id: string
           item_id: string
           lender_id: string
           notes: string | null
+          paid_at: string | null
+          payment_intent_id: string | null
           status: string
           total_amount: number
           updated_at: string
@@ -142,12 +147,17 @@ export type Database = {
           borrow_date: string
           borrower_id: string
           created_at?: string
+          delivery_address?: string | null
+          delivery_notes?: string | null
+          delivery_type?: string | null
           deposit_amount?: number | null
           due_date: string
           id?: string
           item_id: string
           lender_id: string
           notes?: string | null
+          paid_at?: string | null
+          payment_intent_id?: string | null
           status?: string
           total_amount: number
           updated_at?: string
@@ -157,12 +167,17 @@ export type Database = {
           borrow_date?: string
           borrower_id?: string
           created_at?: string
+          delivery_address?: string | null
+          delivery_notes?: string | null
+          delivery_type?: string | null
           deposit_amount?: number | null
           due_date?: string
           id?: string
           item_id?: string
           lender_id?: string
           notes?: string | null
+          paid_at?: string | null
+          payment_intent_id?: string | null
           status?: string
           total_amount?: number
           updated_at?: string
@@ -185,8 +200,12 @@ export type Database = {
           id: string
           is_read: boolean | null
           message_type: string | null
+          negotiation_status: string | null
           offer_amount: number | null
+          offer_data: Json | null
           offer_status: string | null
+          offer_type: string | null
+          payment_status: string | null
           sender_id: string
         }
         Insert: {
@@ -196,8 +215,12 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message_type?: string | null
+          negotiation_status?: string | null
           offer_amount?: number | null
+          offer_data?: Json | null
           offer_status?: string | null
+          offer_type?: string | null
+          payment_status?: string | null
           sender_id: string
         }
         Update: {
@@ -207,8 +230,12 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message_type?: string | null
+          negotiation_status?: string | null
           offer_amount?: number | null
+          offer_data?: Json | null
           offer_status?: string | null
+          offer_type?: string | null
+          payment_status?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -256,6 +283,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      order_actions: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string | null
+          id: string
+          order_id: string
+          order_type: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string | null
+          id?: string
+          order_id: string
+          order_type: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          order_type?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -307,8 +372,11 @@ export type Database = {
           full_name: string | null
           id: string
           location: string | null
+          payment_enabled: boolean | null
           phone: string | null
           rating: number | null
+          stripe_account_id: string | null
+          stripe_account_verified: boolean | null
           total_ratings: number | null
           updated_at: string
           user_id: string
@@ -320,8 +388,11 @@ export type Database = {
           full_name?: string | null
           id?: string
           location?: string | null
+          payment_enabled?: boolean | null
           phone?: string | null
           rating?: number | null
+          stripe_account_id?: string | null
+          stripe_account_verified?: boolean | null
           total_ratings?: number | null
           updated_at?: string
           user_id: string
@@ -333,8 +404,11 @@ export type Database = {
           full_name?: string | null
           id?: string
           location?: string | null
+          payment_enabled?: boolean | null
           phone?: string | null
           rating?: number | null
+          stripe_account_id?: string | null
+          stripe_account_verified?: boolean | null
           total_ratings?: number | null
           updated_at?: string
           user_id?: string
@@ -382,8 +456,13 @@ export type Database = {
           customer_id: string
           duration_hours: number
           id: string
+          paid_at: string | null
+          payment_intent_id: string | null
           provider_id: string
+          service_address: string | null
           service_id: string
+          service_notes: string | null
+          service_type: string | null
           special_requests: string | null
           status: string
           total_amount: number
@@ -396,8 +475,13 @@ export type Database = {
           customer_id: string
           duration_hours?: number
           id?: string
+          paid_at?: string | null
+          payment_intent_id?: string | null
           provider_id: string
+          service_address?: string | null
           service_id: string
+          service_notes?: string | null
+          service_type?: string | null
           special_requests?: string | null
           status?: string
           total_amount: number
@@ -410,8 +494,13 @@ export type Database = {
           customer_id?: string
           duration_hours?: number
           id?: string
+          paid_at?: string | null
+          payment_intent_id?: string | null
           provider_id?: string
+          service_address?: string | null
           service_id?: string
+          service_notes?: string | null
+          service_type?: string | null
           special_requests?: string | null
           status?: string
           total_amount?: number
