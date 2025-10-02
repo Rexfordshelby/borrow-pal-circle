@@ -39,42 +39,74 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to complete payment",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Creating Payment Session",
+        description: "Preparing your secure payment...",
+      });
+
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           amount: Math.round(amount * 100), // Convert to cents
           currency: 'usd',
           description: `Payment for ${orderDetails.title}`,
           metadata: {
-            type: orderDetails.type,
+            order_type: orderDetails.type,
             order_id: orderDetails.orderId,
             title: orderDetails.title,
+            user_id: user.id,
           }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Payment error:', error);
+        toast({
+          title: "Payment Failed",
+          description: error.message || "Unable to create payment session",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (data?.url) {
-        // Open Stripe checkout in new tab
-        window.open(data.url, '_blank');
+        // Open in new tab with security attributes
+        window.open(data.url, '_blank', 'noopener,noreferrer');
         
         toast({
-          title: "Redirecting to payment",
-          description: "Complete your payment in the new tab",
+          title: "Payment Window Opened",
+          description: "Complete payment in the new window. We'll notify both parties automatically.",
+          duration: 5000,
         });
 
-        // Close dialog and refresh
+        // Wait a moment before closing dialog
         setTimeout(() => {
           onOpenChange(false);
           onSuccess();
-        }, 1000);
+        }, 1500);
+      } else {
+        toast({
+          title: "Error",
+          description: "No payment URL received. Please try again.",
+          variant: "destructive",
+        });
       }
 
     } catch (error) {
       console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
-        description: "Unable to process payment. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -117,27 +149,33 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </div>
 
           {/* Security Notice */}
-          <div className="flex items-start space-x-2 text-sm text-muted-foreground">
-            <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p>
-              Your payment is secured by Stripe with 256-bit SSL encryption.
-              You'll be redirected to complete the payment securely.
-            </p>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span>Instant confirmation</span>
+          <div className="space-y-2">
+            <div className="flex items-start space-x-2 text-sm text-muted-foreground">
+              <Shield className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600" />
+              <div>
+                <p className="font-medium text-foreground">Secure Stripe Payment</p>
+                <p className="text-xs">
+                  256-bit SSL encryption protects your payment information
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span>Buyer protection included</span>
+            <div className="flex items-start space-x-2 text-sm text-muted-foreground">
+              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600" />
+              <div>
+                <p className="font-medium text-foreground">Instant Verification</p>
+                <p className="text-xs">
+                  Both you and the owner will be notified immediately when payment completes
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span>Secure transaction</span>
+            <div className="flex items-start space-x-2 text-sm text-muted-foreground">
+              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600" />
+              <div>
+                <p className="font-medium text-foreground">Buyer Protection</p>
+                <p className="text-xs">
+                  Your payment is protected by Stripe's security measures
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -151,43 +151,69 @@ const Chat = () => {
 
   const fetchChatRooms = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch chat rooms
+      const { data: rooms, error } = await supabase
         .from('chat_rooms')
-        .select(`
-          *,
-          participant_1_profile:profiles!participant_1 (
-            full_name,
-            avatar_url
-          ),
-          participant_2_profile:profiles!participant_2 (
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .or(`participant_1.eq.${user?.id},participant_2.eq.${user?.id}`)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
       if (error) {
         console.error('Error fetching chat rooms:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load conversations",
+          variant: "destructive",
+        });
         return;
       }
 
-      if (data) {
-        const roomsWithOtherUser = data.map(room => {
-          const otherUser = room.participant_1 === user?.id 
-            ? room.participant_2_profile 
-            : room.participant_1_profile;
-          return {
-            ...room,
-            other_user: otherUser || { full_name: 'Unknown User', avatar_url: null }
-          };
-        });
-        setChatRooms(roomsWithOtherUser as any);
+      if (!rooms || rooms.length === 0) {
+        setChatRooms([]);
+        return;
       }
+
+      // Get all unique participant IDs
+      const participantIds = new Set<string>();
+      rooms.forEach(room => {
+        participantIds.add(room.participant_1);
+        participantIds.add(room.participant_2);
+      });
+
+      // Fetch all profiles in one query
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', Array.from(participantIds));
+
+      // Create a map for quick lookup
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      // Map chat rooms with profile data
+      const roomsWithOtherUser = rooms.map(room => {
+        const otherUserId = room.participant_1 === user?.id 
+          ? room.participant_2 
+          : room.participant_1;
+        const otherProfile = profileMap.get(otherUserId);
+        
+        return {
+          ...room,
+          otherUser: {
+            id: otherUserId,
+            name: otherProfile?.full_name || 'Unknown User',
+            avatar: otherProfile?.avatar_url,
+          }
+        };
+      });
+
+      setChatRooms(roomsWithOtherUser);
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
-    } finally {
-      setLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to load conversations",
+        variant: "destructive",
+      });
     }
   };
 
@@ -369,12 +395,65 @@ const Chat = () => {
     }
   };
 
-  const handlePayment = () => {
-    setShowPaymentDialog(false);
-    toast({
-      title: "Payment Initiated",
-      description: "Complete payment in the new tab",
-    });
+  const handlePayment = async (offerData: any) => {
+    if (!roomId || !orderContext) {
+      toast({
+        title: "Error",
+        description: "Order information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      toast({
+        title: "Creating Payment",
+        description: "Preparing secure payment session...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          amount: Math.round(offerData.amount * 100), // Convert to cents
+          currency: 'usd',
+          description: `Payment for ${orderContext.type}: ${orderContext.title}`,
+          metadata: {
+            order_id: orderContext.orderId,
+            order_type: orderContext.type,
+            chat_room_id: roomId,
+            offer_amount: offerData.amount,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Payment creation error:', error);
+        toast({
+          title: "Payment Failed",
+          description: error.message || "Could not create payment. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.url) {
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+        
+        toast({
+          title: "Payment Window Opened",
+          description: "Complete payment in the new window. Both parties will be notified when done.",
+          duration: 5000,
+        });
+        
+        setShowPaymentDialog(false);
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -648,7 +727,10 @@ const Chat = () => {
           onOpenChange={setShowPaymentDialog}
           amount={currentOffer.amount}
           orderDetails={orderContext}
-          onSuccess={handlePayment}
+          onSuccess={() => {
+            setShowPaymentDialog(false);
+            fetchMessages(roomId);
+          }}
         />
       )}
     </div>
