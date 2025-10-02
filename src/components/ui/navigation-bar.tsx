@@ -9,7 +9,8 @@ import {
   ShoppingBag, 
   User,
   Wrench,
-  Bell
+  Bell,
+  Trophy
 } from 'lucide-react';
 
 interface NavigationBarProps {
@@ -71,6 +72,16 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ unreadCount = 0 }) => {
           >
             <ShoppingBag className="w-5 h-5" />
             <span className="text-xs">Orders</span>
+          </Button>
+
+          <Button
+            variant={isActive('/gamification') ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => navigate('/gamification')}
+            className="flex flex-col items-center space-y-1 px-3 py-2 h-auto"
+          >
+            <Trophy className="w-5 h-5" />
+            <span className="text-xs">Rewards</span>
           </Button>
 
           <Button

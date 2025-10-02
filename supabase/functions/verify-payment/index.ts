@@ -115,6 +115,8 @@ serve(async (req) => {
         .from(table)
         .update({ 
           status: 'accepted',
+          paid_at: new Date().toISOString(),
+          payment_intent_id: session.payment_intent?.id || session.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', metadata.order_id);
@@ -122,7 +124,32 @@ serve(async (req) => {
       if (updateError) {
         logStep("Error updating transaction status", updateError);
       } else {
-        logStep("Transaction status updated", { orderId: metadata.order_id, table });
+        logStep("Transaction status updated to paid", { orderId: metadata.order_id, table });
+        
+        // Create notification for the receiver
+        const receiverIdField = metadata.order_type === 'lending' ? 'lender_id' : 'provider_id';
+        const { data: orderData } = await supabaseClient
+          .from(table)
+          .select(receiverIdField)
+          .eq('id', metadata.order_id)
+          .single();
+          
+        if (orderData) {
+          const receiverId = metadata.order_type === 'lending' 
+            ? (orderData as any).lender_id 
+            : (orderData as any).provider_id;
+            
+          await supabaseClient
+            .from('notifications')
+            .insert({
+              user_id: receiverId,
+              type: 'payment_received',
+              title: 'Payment Received',
+              message: `You have received a payment of $${(session.amount_total || 0) / 100}`,
+              reference_id: metadata.order_id,
+              reference_type: metadata.order_type === 'lending' ? 'lending_transaction' : 'service_booking'
+            });
+        }
       }
     }
 

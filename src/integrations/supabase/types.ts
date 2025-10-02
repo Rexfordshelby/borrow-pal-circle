@@ -248,6 +248,59 @@ export type Database = {
           },
         ]
       }
+      negotiations: {
+        Row: {
+          chat_room_id: string
+          created_at: string | null
+          id: string
+          message: string | null
+          offer_amount: number
+          order_id: string
+          order_type: string
+          original_amount: number
+          receiver_id: string
+          responded_at: string | null
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          chat_room_id: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          offer_amount: number
+          order_id: string
+          order_type: string
+          original_amount: number
+          receiver_id: string
+          responded_at?: string | null
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          chat_room_id?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          offer_amount?: number
+          order_id?: string
+          order_type?: string
+          original_amount?: number
+          receiver_id?: string
+          responded_at?: string | null
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiations_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -313,6 +366,27 @@ export type Database = {
           reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_top_borrowers"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "order_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_top_lenders"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "order_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_top_referrers"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "order_actions_actor_id_fkey"
             columns: ["actor_id"]
@@ -575,15 +649,145 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          badge_category: Database["public"]["Enums"]["badge_category"]
+          badge_description: string | null
+          badge_icon: string | null
+          badge_name: string
+          earned_at: string | null
+          id: string
+          rarity: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_category?: Database["public"]["Enums"]["badge_category"]
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_name: string
+          earned_at?: string | null
+          id?: string
+          rarity?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_category?: Database["public"]["Enums"]["badge_category"]
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_name?: string
+          earned_at?: string | null
+          id?: string
+          rarity?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          created_at: string | null
+          last_activity_date: string | null
+          level: number | null
+          on_time_payments: number | null
+          streak_days: number | null
+          total_borrows: number | null
+          total_lends: number | null
+          total_referrals: number | null
+          trust_score: number | null
+          updated_at: string | null
+          user_id: string
+          xp: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          last_activity_date?: string | null
+          level?: number | null
+          on_time_payments?: number | null
+          streak_days?: number | null
+          total_borrows?: number | null
+          total_lends?: number | null
+          total_referrals?: number | null
+          trust_score?: number | null
+          updated_at?: string | null
+          user_id: string
+          xp?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          last_activity_date?: string | null
+          level?: number | null
+          on_time_payments?: number | null
+          streak_days?: number | null
+          total_borrows?: number | null
+          total_lends?: number | null
+          total_referrals?: number | null
+          trust_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+          xp?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      leaderboard_top_borrowers: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          level: number | null
+          on_time_payments: number | null
+          rank: number | null
+          total_borrows: number | null
+          trust_score: number | null
+          user_id: string | null
+          xp: number | null
+        }
+        Relationships: []
+      }
+      leaderboard_top_lenders: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          level: number | null
+          rank: number | null
+          rating: number | null
+          total_lends: number | null
+          trust_score: number | null
+          user_id: string | null
+          xp: number | null
+        }
+        Relationships: []
+      }
+      leaderboard_top_referrers: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          level: number | null
+          rank: number | null
+          total_referrals: number | null
+          user_id: string | null
+          xp: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      award_xp: {
+        Args: { p_user_id: string; p_xp_amount: number }
+        Returns: undefined
+      }
+      check_and_award_badges: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      badge_category:
+        | "borrowing"
+        | "lending"
+        | "community"
+        | "streak"
+        | "special"
+        | "referral"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -710,6 +914,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      badge_category: [
+        "borrowing",
+        "lending",
+        "community",
+        "streak",
+        "special",
+        "referral",
+      ],
+    },
   },
 } as const

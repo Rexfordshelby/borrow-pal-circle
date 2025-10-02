@@ -100,14 +100,13 @@ const Chat = () => {
   const createOrFindChatRoom = async (otherUserId: string) => {
     try {
       // Check if chat room already exists
-      const { data: existingRoom } = await supabase
+      const { data: existingRooms } = await supabase
         .from('chat_rooms')
         .select('*')
-        .or(`and(participant_1.eq.${user?.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user?.id})`)
-        .single();
+        .or(`and(participant_1.eq.${user?.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user?.id})`);
 
-      if (existingRoom) {
-        navigate(`/chat/${existingRoom.id}`);
+      if (existingRooms && existingRooms.length > 0) {
+        navigate(`/chat/${existingRooms[0].id}`);
         return;
       }
 
@@ -122,6 +121,19 @@ const Chat = () => {
         .single();
 
       if (error) {
+        // If duplicate, try to fetch existing room again
+        if (error.code === '23505') {
+          const { data: retryRooms } = await supabase
+            .from('chat_rooms')
+            .select('*')
+            .or(`and(participant_1.eq.${user?.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user?.id})`);
+          
+          if (retryRooms && retryRooms.length > 0) {
+            navigate(`/chat/${retryRooms[0].id}`);
+            return;
+          }
+        }
+        
         console.error('Error creating chat room:', error);
         toast({
           title: "Error",

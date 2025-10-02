@@ -23,6 +23,7 @@ import AddListing from "./pages/AddListing";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentVerification from "./pages/PaymentVerification";
+import Gamification from "./pages/Gamification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,10 +51,11 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/add-listing" element={<AddListing />} />
-                <Route path="/payment" element={<Payment />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                <Route path="/payment-verification" element={<PaymentVerification />} />
-                <Route path="*" element={<NotFound />} />
+            <Route path="/payment" element={<Payment />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-verification" element={<PaymentVerification />} />
+            <Route path="/gamification" element={<Gamification />} />
+            <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
             {/* Only show navigation on authenticated pages */}
