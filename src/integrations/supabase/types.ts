@@ -128,6 +128,8 @@ export type Database = {
           borrower_id: string
           created_at: string
           delivery_address: string | null
+          delivery_confirmed_at: string | null
+          delivery_confirmed_by: string | null
           delivery_notes: string | null
           delivery_type: string | null
           deposit_amount: number | null
@@ -138,6 +140,10 @@ export type Database = {
           notes: string | null
           paid_at: string | null
           payment_intent_id: string | null
+          qr_delivery_code: string | null
+          qr_return_code: string | null
+          return_confirmed_at: string | null
+          return_confirmed_by: string | null
           status: string
           total_amount: number
           updated_at: string
@@ -148,6 +154,8 @@ export type Database = {
           borrower_id: string
           created_at?: string
           delivery_address?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_confirmed_by?: string | null
           delivery_notes?: string | null
           delivery_type?: string | null
           deposit_amount?: number | null
@@ -158,6 +166,10 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_intent_id?: string | null
+          qr_delivery_code?: string | null
+          qr_return_code?: string | null
+          return_confirmed_at?: string | null
+          return_confirmed_by?: string | null
           status?: string
           total_amount: number
           updated_at?: string
@@ -168,6 +180,8 @@ export type Database = {
           borrower_id?: string
           created_at?: string
           delivery_address?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_confirmed_by?: string | null
           delivery_notes?: string | null
           delivery_type?: string | null
           deposit_amount?: number | null
@@ -178,6 +192,10 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_intent_id?: string | null
+          qr_delivery_code?: string | null
+          qr_return_code?: string | null
+          return_confirmed_at?: string | null
+          return_confirmed_by?: string | null
           status?: string
           total_amount?: number
           updated_at?: string
@@ -533,9 +551,15 @@ export type Database = {
           paid_at: string | null
           payment_intent_id: string | null
           provider_id: string
+          qr_service_complete_code: string | null
+          qr_service_start_code: string | null
           service_address: string | null
+          service_completed_at: string | null
+          service_completed_by: string | null
           service_id: string
           service_notes: string | null
+          service_started_at: string | null
+          service_started_by: string | null
           service_type: string | null
           special_requests: string | null
           status: string
@@ -552,9 +576,15 @@ export type Database = {
           paid_at?: string | null
           payment_intent_id?: string | null
           provider_id: string
+          qr_service_complete_code?: string | null
+          qr_service_start_code?: string | null
           service_address?: string | null
+          service_completed_at?: string | null
+          service_completed_by?: string | null
           service_id: string
           service_notes?: string | null
+          service_started_at?: string | null
+          service_started_by?: string | null
           service_type?: string | null
           special_requests?: string | null
           status?: string
@@ -571,9 +601,15 @@ export type Database = {
           paid_at?: string | null
           payment_intent_id?: string | null
           provider_id?: string
+          qr_service_complete_code?: string | null
+          qr_service_start_code?: string | null
           service_address?: string | null
+          service_completed_at?: string | null
+          service_completed_by?: string | null
           service_id?: string
           service_notes?: string | null
+          service_started_at?: string | null
+          service_started_by?: string | null
           service_type?: string | null
           special_requests?: string | null
           status?: string
@@ -778,6 +814,28 @@ export type Database = {
       check_and_award_badges: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      generate_qr_code: {
+        Args: { action_type: string; transaction_id: string }
+        Returns: string
+      }
+      verify_lending_qr_scan: {
+        Args: {
+          p_action: string
+          p_qr_code: string
+          p_transaction_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      verify_service_qr_scan: {
+        Args: {
+          p_action: string
+          p_booking_id: string
+          p_qr_code: string
+          p_user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

@@ -296,86 +296,130 @@ const Orders = () => {
       ? (userType === 'requester' ? transaction.lender_id : transaction.borrower_id)
       : (userType === 'requester' ? transaction.provider_id : transaction.customer_id);
 
-    return (
-      <Card className="card-shadow interactive-hover">
-        <CardContent className="p-6">
-          <div className="flex items-start space-x-4">
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-              {itemOrService?.image_url ? (
-                <img
-                  src={itemOrService.image_url}
-                  alt={itemOrService.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="w-6 h-6 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h3 className="font-semibold truncate">{itemOrService?.title}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {transaction.type === 'lending' ? 'Item' : 'Service'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="w-5 h-5">
-                      <AvatarImage src={otherUser?.avatar_url} />
-                      <AvatarFallback className="text-xs">
-                        {otherUser?.full_name?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">
-                      {userType === 'requester' ? 'from' : 'to'} {otherUser?.full_name || 'Unknown User'}
-                    </span>
-                  </div>
-                </div>
-                {getStatusBadge(transaction.status)}
+  return (
+    <Card className="card-shadow interactive-hover">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4">
+          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+            {itemOrService?.image_url ? (
+              <img
+                src={itemOrService.image_url}
+                alt={itemOrService.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-muted-foreground" />
               </div>
+            )}
+          </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {transaction.type === 'lending' ? (
-                      `${format(new Date(transaction.borrow_date!), 'MMM dd')} - ${format(new Date(transaction.due_date!), 'MMM dd')}`
-                    ) : (
-                      `${format(new Date(transaction.booking_date!), 'MMM dd')} at ${transaction.booking_time}`
-                    )}
+          <div className="flex-1 min-w-0 w-full">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 gap-2">
+              <div className="w-full sm:w-auto">
+                <div className="flex items-center flex-wrap gap-2 mb-1">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">{itemOrService?.title}</h3>
+                  <Badge variant="secondary" className="text-xs">
+                    {transaction.type === 'lending' ? 'Item' : 'Service'}
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Avatar className="w-4 h-4 sm:w-5 sm:h-5">
+                    <AvatarImage src={otherUser?.avatar_url} />
+                    <AvatarFallback className="text-xs">
+                      {otherUser?.full_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    {userType === 'requester' ? 'from' : 'to'} {otherUser?.full_name || 'Unknown User'}
                   </span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <DollarSign className="w-4 h-4" />
-                  <span>${transaction.total_amount}</span>
-                  {transaction.deposit_amount && (
-                    <span className="text-xs">(+${transaction.deposit_amount} deposit)</span>
+              </div>
+              {getStatusBadge(transaction.status)}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">
+                  {transaction.type === 'lending' ? (
+                    `${format(new Date(transaction.borrow_date!), 'MMM dd')} - ${format(new Date(transaction.due_date!), 'MMM dd')}`
+                  ) : (
+                    `${format(new Date(transaction.booking_date!), 'MMM dd')} ${transaction.booking_time}`
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span>${transaction.total_amount}</span>
+                {transaction.deposit_amount && (
+                  <span className="text-xs">(+${transaction.deposit_amount})</span>
+                )}
+              </div>
+            </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {canMessage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/chat?user=${chatUserId}`)}
+                      className="flex items-center space-x-1"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>Message</span>
+                    </Button>
+                  )}
+                  
+                  {/* QR Code Buttons */}
+                  {transaction.status === 'paid' && isLender && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=delivery`)}
+                      className="flex items-center space-x-1"
+                    >
+                      📱 {transaction.type === 'lending' ? 'Delivery' : 'Start'} QR
+                    </Button>
+                  )}
+                  
+                  {transaction.status === 'borrowed' && isLender && transaction.type === 'lending' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=return`)}
+                      className="flex items-center space-x-1"
+                    >
+                      📱 Return QR
+                    </Button>
+                  )}
+                  
+                  {transaction.status === 'ongoing' && isServiceProvider && transaction.type === 'service' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=return`)}
+                      className="flex items-center space-x-1"
+                    >
+                      📱 Complete QR
+                    </Button>
+                  )}
+                  
+                  {/* Scan Button for customer/borrower */}
+                  {(transaction.status === 'paid' || transaction.status === 'borrowed' || transaction.status === 'ongoing') && !isLender && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/qr-scan?type=${transaction.type}&action=${transaction.status === 'borrowed' || transaction.status === 'ongoing' ? 'return' : 'delivery'}`)}
+                      className="flex items-center space-x-1"
+                    >
+                      📸 Scan QR
+                    </Button>
                   )}
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between">
-                {canMessage ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/chat?user=${chatUserId}`)}
-                    className="flex items-center space-x-1"
-                  >
-                    <MessageCircle className="w-3 h-3" />
-                    <span>Message</span>
-                  </Button>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Messages available after acceptance
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {canAccept && (
                     <Button
                       variant="default"

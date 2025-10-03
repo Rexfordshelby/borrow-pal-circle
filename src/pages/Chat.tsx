@@ -75,21 +75,37 @@ const Chat = () => {
   });
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    const initializeChat = async () => {
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        if (targetUserId && !roomId) {
+          await createOrFindChatRoom(targetUserId);
+        } else {
+          await fetchChatRooms();
+        }
+        
+        if (roomId) {
+          await fetchMessages(roomId);
+          await fetchOrderContext(roomId);
+        }
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load chat",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (targetUserId && !roomId) {
-      createOrFindChatRoom(targetUserId);
-    } else {
-      fetchChatRooms();
-    }
-    
-    if (roomId) {
-      fetchMessages(roomId);
-      fetchOrderContext(roomId);
-    }
+    initializeChat();
   }, [user, navigate, roomId, targetUserId]);
 
   // Auto-scroll to bottom when new messages arrive
@@ -470,78 +486,82 @@ const Chat = () => {
   // Chat list view
   if (!roomId) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="bg-card border-b sticky top-0 z-50 card-shadow">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-background pb-20 sm:pb-0">
+      {/* Header */}
+      <header className="bg-card border-b sticky top-0 z-50 card-shadow">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => navigate('/home')}
-              className="flex items-center space-x-2"
+              size="sm"
+              className="flex items-center space-x-1 sm:space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Home</span>
+              <span className="text-sm sm:text-base">Back</span>
             </Button>
-            <h1 className="text-xl font-semibold">Messages</h1>
-            <div className="w-20"></div>
+            <h1 className="text-lg sm:text-xl font-semibold">Messages</h1>
+            <div className="w-16 sm:w-20"></div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="container mx-auto px-4 py-6 max-w-2xl">
-          {/* Search */}
-          <div className="mb-6 fade-in">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search conversations..."
-                className="pl-10"
-              />
-            </div>
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-2xl">
+        {/* Search */}
+        <div className="mb-4 sm:mb-6 fade-in">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search conversations..."
+              className="pl-10 h-10 sm:h-11"
+            />
           </div>
+        </div>
 
-          {/* Chat Rooms */}
-          <div className="space-y-2 slide-up">
-            {chatRooms.length === 0 ? (
-              <div className="text-center py-12 space-y-4">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                  <MessageCircle className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">No conversations yet</h3>
-                <p className="text-muted-foreground">
-                  Start a conversation by messaging someone about their item
-                </p>
-                <Button
-                  variant="hero"
-                  onClick={() => navigate('/home')}
-                >
-                  Browse Items
-                </Button>
+        {/* Chat Rooms */}
+        <div className="space-y-2 slide-up">
+          {chatRooms.length === 0 ? (
+            <div className="text-center py-12 space-y-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                <MessageCircle className="w-8 h-8 text-muted-foreground" />
               </div>
-            ) : (
-              chatRooms.map((room) => (
-                <Card
-                  key={room.id}
-                  className="cursor-pointer interactive-hover card-shadow"
-                  onClick={() => navigate(`/chat/${room.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={room.other_user?.avatar_url || ''} />
-                        <AvatarFallback>
-                          {room.other_user?.full_name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold truncate">
-                            {room.other_user?.full_name || 'Unknown User'}
-                          </h3>
-                          {room.last_message_at && (
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(room.last_message_at).toLocaleDateString()}
-                            </span>
+              <h3 className="text-base sm:text-lg font-medium">No conversations yet</h3>
+              <p className="text-sm text-muted-foreground px-4">
+                Start a conversation by messaging someone about their item
+              </p>
+              <Button
+                variant="hero"
+                onClick={() => navigate('/home')}
+                size="sm"
+              >
+                Browse Items
+              </Button>
+            </div>
+          ) : (
+            chatRooms.map((room) => (
+              <Card
+                key={room.id}
+                className="cursor-pointer interactive-hover card-shadow"
+                onClick={() => navigate(`/chat/${room.id}`)}
+              >
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                      <AvatarImage src={room.other_user?.avatar_url || ''} />
+                      <AvatarFallback>
+                        {room.other_user?.full_name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">
+                          {room.other_user?.full_name || 'Unknown User'}
+                        </h3>
+                        {room.last_message_at && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                            {new Date(room.last_message_at).toLocaleDateString()}
+                          </span>
                           )}
                         </div>
                         
@@ -564,50 +584,53 @@ const Chat = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-card border-b card-shadow">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/chat')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </Button>
-
-          <div className="flex items-center space-x-3">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={currentRoom?.other_user?.avatar_url || ''} />
-              <AvatarFallback>
-                {currentRoom?.other_user?.full_name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <span className="font-semibold">
-              {currentRoom?.other_user?.full_name || 'Unknown User'}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon">
-              <Phone className="w-4 h-4" />
+      <header className="bg-card border-b card-shadow sticky top-0 z-50">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/chat')}
+              size="sm"
+              className="flex items-center space-x-1 sm:space-x-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <Button variant="ghost" size="icon">
-              <Video className="w-4 h-4" />
-            </Button>
+
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 justify-center max-w-[200px] sm:max-w-none">
+              <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                <AvatarImage src={currentRoom?.other_user?.avatar_url || ''} />
+                <AvatarFallback>
+                  {currentRoom?.other_user?.full_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-semibold text-sm sm:text-base truncate">
+                {currentRoom?.other_user?.full_name || 'Unknown User'}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+                <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 hidden sm:flex">
+                <Video className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Messages */}
-      <main className="flex-1 container mx-auto px-4 py-4 max-w-2xl">
-        <div className="space-y-4 min-h-[60vh]">
-          {messages.length === 0 ? (
+      <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 pb-20 sm:pb-4">
+        <div className="container mx-auto max-w-2xl">
+          <div className="space-y-3 sm:space-y-4 min-h-[50vh]">{messages.length === 0 ? (
             <div className="text-center py-12 space-y-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
                 <MessageCircle className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-medium">Start the conversation</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Send your first message to get started
               </p>
             </div>
@@ -620,8 +643,8 @@ const Chat = () => {
                 }`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md ${
-                    message.message_type === 'offer' ? 'w-full' : ''
+                  className={`max-w-[85%] sm:max-w-xs lg:max-w-md ${
+                    message.message_type === 'offer' ? 'w-full sm:w-auto' : ''
                   }`}
                 >
                   {message.message_type === 'offer' && message.offer_data ? (
@@ -647,13 +670,13 @@ const Chat = () => {
                     />
                   ) : (
                     <div
-                      className={`px-4 py-2 rounded-lg ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg ${
                         message.sender_id === user?.id
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
+                      <p className="text-sm break-words">{message.content}</p>
                       <p
                         className={`text-xs mt-1 ${
                           message.sender_id === user?.id
@@ -674,15 +697,17 @@ const Chat = () => {
           )}
           <div ref={messagesEndRef} />
         </div>
+        </div>
       </main>
 
       {/* Message Input */}
-      <footer className="bg-card border-t p-4">
+      <footer className="bg-card border-t p-3 sm:p-4 sticky bottom-0 safe-area-inset-bottom">
         <div className="container mx-auto max-w-2xl">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-end space-x-2">
             <Button 
               variant="ghost" 
               size="icon"
+              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
               onClick={() => {
                 setOfferType('price_offer');
                 setShowOfferDialog(true);
@@ -697,14 +722,15 @@ const Chat = () => {
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                className="flex-1"
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                className="flex-1 min-h-[36px] sm:min-h-[40px]"
               />
               <Button
                 onClick={sendMessage}
                 disabled={!newMessage.trim()}
                 size="icon"
                 variant="hero"
+                className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
               >
                 <Send className="w-4 h-4" />
               </Button>

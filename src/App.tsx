@@ -24,6 +24,8 @@ import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentVerification from "./pages/PaymentVerification";
 import Gamification from "./pages/Gamification";
+import QRScan from "./pages/QRScan";
+import OrderQRCode from "./pages/OrderQRCode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,9 +56,11 @@ const App = () => (
             <Route path="/payment" element={<Payment />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-verification" element={<PaymentVerification />} />
-            <Route path="/gamification" element={<Gamification />} />
-            <Route path="*" element={<NotFound />} />
-              </Routes>
+          <Route path="/gamification" element={<Gamification />} />
+          <Route path="/qr-scan" element={<QRScan />} />
+          <Route path="/orders/:orderId/qr" element={<OrderQRCode />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
             </div>
             {/* Only show navigation on authenticated pages */}
             <NavigationBar />

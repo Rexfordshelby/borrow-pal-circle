@@ -17,9 +17,11 @@ const Index = () => {
       <div className="max-w-md w-full space-y-8 text-center">
         {/* Logo */}
         <div className="space-y-4 fade-in">
-          <div className="w-20 h-20 bg-gradient-to-r from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
-            <span className="text-2xl font-bold text-primary-foreground">BP</span>
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="BorrowPal Logo" 
+            className="w-24 h-24 mx-auto object-contain"
+          />
           
           <div className="space-y-2">
             <h1 className="text-4xl font-bold gradient-text">BorrowPal</h1>
