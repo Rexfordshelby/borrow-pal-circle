@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QrReader } from 'react-qr-scanner';
+import QrScanner from 'react-qr-scanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -63,7 +63,7 @@ export const QRCodeScanner: React.FC<QRCodeScannerProps> = ({
         {scanning && (
           <div className="space-y-4">
             <div className="relative aspect-square w-full overflow-hidden rounded-lg border-2 border-primary bg-muted">
-              <QrReader
+              <QrScanner
                 delay={300}
                 onError={handleError}
                 onScan={handleScan}

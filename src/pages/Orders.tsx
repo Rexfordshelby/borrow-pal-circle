@@ -476,24 +476,25 @@ const Orders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 sm:pb-0">
       {/* Header */}
       <header className="bg-card border-b sticky top-0 z-50 card-shadow">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate('/home')}
-            className="flex items-center space-x-2"
+            size="sm"
+            className="h-9"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="text-sm sm:text-base">Back</span>
           </Button>
-          <h1 className="text-xl font-semibold">My Orders</h1>
-          <div className="w-20"></div>
+          <h1 className="text-lg sm:text-2xl font-bold truncate">My Orders</h1>
+          <div className="w-16 sm:w-20"></div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-4xl">
         <Tabs defaultValue="requested" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="requested">
