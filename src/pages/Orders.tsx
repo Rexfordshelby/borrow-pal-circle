@@ -359,15 +359,15 @@ const Orders = () => {
             </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {canMessage && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/chat?user=${chatUserId}`)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 min-h-[44px] flex-1 sm:flex-none"
                     >
-                      <MessageCircle className="w-3 h-3" />
+                      <MessageCircle className="w-4 h-4" />
                       <span>Message</span>
                     </Button>
                   )}
@@ -378,9 +378,10 @@ const Orders = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=delivery`)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 min-h-[44px] flex-1 sm:flex-none"
                     >
-                      📱 {transaction.type === 'lending' ? 'Delivery' : 'Start'} QR
+                      <span className="text-base mr-1">📱</span>
+                      <span>{transaction.type === 'lending' ? 'Delivery' : 'Start'} QR</span>
                     </Button>
                   )}
                   
@@ -389,20 +390,22 @@ const Orders = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=return`)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 min-h-[44px] flex-1 sm:flex-none"
                     >
-                      📱 Return QR
+                      <span className="text-base mr-1">📱</span>
+                      <span>Return QR</span>
                     </Button>
                   )}
-                  
+                   
                   {transaction.status === 'ongoing' && isServiceProvider && transaction.type === 'service' && (
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=return`)}
-                      className="flex items-center space-x-1"
+                      onClick={() => navigate(`/orders/${transaction.id}/qr?type=${transaction.type}&action=complete`)}
+                      className="flex items-center space-x-1 min-h-[44px] flex-1 sm:flex-none"
                     >
-                      📱 Complete QR
+                      <span className="text-base mr-1">📱</span>
+                      <span>Complete QR</span>
                     </Button>
                   )}
                   
@@ -412,19 +415,21 @@ const Orders = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => navigate(`/qr-scan?type=${transaction.type}&action=${transaction.status === 'borrowed' || transaction.status === 'ongoing' ? 'return' : 'delivery'}`)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 min-h-[44px] flex-1 sm:flex-none"
                     >
-                      📸 Scan QR
+                      <span className="text-base mr-1">📸</span>
+                      <span>Scan QR</span>
                     </Button>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {canAccept && (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => updateTransactionStatus(transaction, 'accepted')}
+                      className="min-h-[44px] flex-1 sm:flex-none"
                     >
                       Accept
                     </Button>
@@ -434,6 +439,7 @@ const Orders = () => {
                       variant="destructive"
                       size="sm"
                       onClick={() => updateTransactionStatus(transaction, 'declined')}
+                      className="min-h-[44px] flex-1 sm:flex-none"
                     >
                       Decline
                     </Button>
@@ -443,8 +449,9 @@ const Orders = () => {
                       variant="default"
                       size="sm"
                       onClick={() => updateTransactionStatus(transaction, 'completed')}
+                      className="min-h-[44px] flex-1 sm:flex-none"
                     >
-                      Mark Complete
+                      Complete
                     </Button>
                   )}
                 </div>

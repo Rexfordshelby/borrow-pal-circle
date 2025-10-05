@@ -125,6 +125,16 @@ const Chat = () => {
 
   const createOrFindChatRoom = async (otherUserId: string) => {
     try {
+      // Prevent self-chat
+      if (user?.id === otherUserId) {
+        toast({
+          title: "Error",
+          description: "You can't chat with yourself",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data: existingRooms } = await supabase
         .from('chat_rooms')
         .select('*')
@@ -313,6 +323,9 @@ const Chat = () => {
 
   const handleAcceptOffer = async (messageId: string) => {
     try {
+      const message = messages.find(m => m.id === messageId);
+      if (!message?.offer) return;
+
       const { error } = await supabase
         .from('messages')
         .update({ negotiation_status: 'accepted' })
@@ -322,12 +335,22 @@ const Chat = () => {
 
       toast({
         title: "Offer Accepted",
-        description: "The offer has been accepted.",
+        description: "Opening payment dialog...",
       });
       
       if (roomId) fetchMessages(roomId);
+      
+      // Auto-open payment dialog after a short delay
+      setTimeout(() => {
+        setPaymentDialogOpen(true);
+      }, 500);
     } catch (error) {
       console.error('Error accepting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept offer",
+        variant: "destructive"
+      });
     }
   };
 

@@ -185,12 +185,12 @@ const OrderQRCode = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto py-8">
+    <div className="min-h-screen bg-background p-3 sm:p-4 pb-24">
+      <div className="max-w-2xl mx-auto py-4 sm:py-8">
         <Button
           variant="ghost"
           onClick={() => navigate('/orders')}
-          className="mb-4"
+          className="mb-4 min-h-[44px]"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Orders
